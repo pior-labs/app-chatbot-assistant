@@ -1,6 +1,14 @@
-# Pior Labs Web App Template
+# Pior Labs Chatbot Assistant
 
-Reusable starting point for platform-native Pior Labs web applications.
+A planned household AI chat application, created from `pior-labs/template-webapp`. The current code is the template scaffold; assistant capabilities and SSO integration are not yet implemented.
+
+## Planning
+
+Start with [the planning index](docs/planning/pior-labs-assistant-notes.md). It links the accepted product decisions, architecture baseline, Codex development workflow, and required verification policy. Development proceeds through working SSO, UI design, then incremental feature implementation. See [AGENTS.md](AGENTS.md) for the repository's agent instructions.
+
+## Template foundation
+
+The following sections describe the inherited template and platform setup conventions.
 
 This template provides the application-side foundation. Shared infrastructure remains owned by `pior-labs/platform-deploy`, shared authentication by `pior-labs/service-auth`, and platform conventions by `pior-labs/platform`.
 
