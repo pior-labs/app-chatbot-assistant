@@ -64,10 +64,10 @@ token returned 403; a clean machine needs a credential with GitHub Packages read
 access, and the app repository must have package access for CI. Cached local
 installation is not evidence of that registry permission.
 
-Companions: service-auth `pnpm typecheck`, `pnpm build` and
-`pnpm --filter @auth/api test:assistant-client` pass. The registration test uses
-a disposable PostgreSQL container and asserts hashed secret/rotation, callbacks,
-PKCE, and preserved existing household fixtures and unrelated clients. Platform Caddy validation
+Companions: service-auth `pnpm typecheck` and `pnpm build` pass. Piotr requested
+keeping tests in this app, so the added service-auth registration test and its
+command were removed after the earlier successful registration checks. Those
+checks are historical evidence, not commands available in the final PR. Platform Caddy validation
 passes using a dummy Cloudflare token and the compiled Caddy image; shell syntax,
 registry rows and diff whitespace are checked. The full platform validation
 script initially hit ENOSPC after building Caddy; validation was rerun directly
@@ -97,4 +97,5 @@ production provisioning/deployment and human merge approval remain outstanding.
 Piotr requested using the existing service-auth `pnpm db:seed` workflow. The
 Assistant-specific seed command and extracted helper were removed; the original
 seed implementation remains unchanged and registers Assistant alongside the other
-configured clients. The isolated registration regression exercises that command.
+configured clients. Piotr also requested removing the added service-auth tests;
+the app retains its auth integration and browser suites.
