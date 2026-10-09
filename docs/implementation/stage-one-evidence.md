@@ -21,8 +21,9 @@ below before PR handoff. No live assistant-model evals apply.
 1. Approve/merge service-auth companion change. Generate fresh
    `ASSISTANT_CLIENT_SECRET` there, and provide the same plaintext as app API
    `CENTRAL_AUTH_CLIENT_SECRET`. Restart service-auth to reload trusted-client cache,
-   then run `pnpm --filter @auth/api db:seed:assistant`. This upserts only Assistant;
-   household users are unchanged. Callbacks are exactly
+   then run the existing `pnpm db:seed`. It skips existing users and upserts all
+   configured OAuth clients; keep the existing seed variables and client secrets
+   configured as before. Callbacks are exactly
    `https://chat.szarans.ca/api/auth/oauth2/callback/auth-pior` and
    `http://localhost:5173/api/auth/oauth2/callback/auth-pior`.
 2. Supply local app secrets (independent `BETTER_AUTH_SECRET`), dedicated local
@@ -52,7 +53,9 @@ this alone does not prove real login. Never put household passwords in fixtures.
 
 ## Verification and review results
 
-The final PR head is the verified revision (also identified in the PR report).
+SSO code revision `39fd82cd89b96449bbb64e1d6bef4a6a630c8bfc` passed the suite below.
+The later seed-workflow update changes app documentation only; its content, links
+and formatting are checked separately.
 Deterministic verification: `pnpm verify` passes formatting, ESLint, typechecks,
 production API/SPA builds, eight database-backed auth tests and four desktop/mobile
 browser cases. `pnpm install --frozen-lockfile --offline` passes using the existing
@@ -64,7 +67,7 @@ installation is not evidence of that registry permission.
 Companions: service-auth `pnpm typecheck`, `pnpm build` and
 `pnpm --filter @auth/api test:assistant-client` pass. The registration test uses
 a disposable PostgreSQL container and asserts hashed secret/rotation, callbacks,
-PKCE, and unchanged household fixtures/other clients. Platform Caddy validation
+PKCE, and preserved existing household fixtures and unrelated clients. Platform Caddy validation
 passes using a dummy Cloudflare token and the compiled Caddy image; shell syntax,
 registry rows and diff whitespace are checked. The full platform validation
 script initially hit ENOSPC after building Caddy; validation was rerun directly
@@ -88,3 +91,10 @@ negative tests and evidence. Resolved findings:
 Real SSO with both household accounts is **pending**, not passing. Hosted discovery
 alone passed. Registration, matching credentials, local real-login verification,
 production provisioning/deployment and human merge approval remain outstanding.
+
+## Seed workflow simplification
+
+Piotr requested using the existing service-auth `pnpm db:seed` workflow. The
+Assistant-specific seed command and extracted helper were removed; the original
+seed implementation remains unchanged and registers Assistant alongside the other
+configured clients. The isolated registration regression exercises that command.

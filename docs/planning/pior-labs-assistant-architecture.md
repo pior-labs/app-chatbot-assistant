@@ -104,3 +104,6 @@ Earlier template observations remain historical baseline evidence. Companion PRs
 are unmerged/unprovisioned; Piotr retains merge/deployment approval. Chat UI,
 assistant capabilities and their live-model evals remain later stages. Application
 sign-out ends only this app session; central SSO remains active.
+
+Piotr selected the existing service-auth `pnpm db:seed` command for client
+registration. No Assistant-specific registration command is needed.
