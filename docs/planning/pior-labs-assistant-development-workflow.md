@@ -14,12 +14,12 @@ Recommended foundation work, established alongside the accepted SSO-first stage 
 
 Proposed local workflow, not yet accepted: run the coder and a fresh reviewer against the same isolated development checkout and test environment, sequentially so the reviewer inspects a stable diff. Keep acceptance criteria and concrete review findings available for handoff. Repair autonomy now follows the accepted policy below. Final merge remains a human decision. These are development permissions, separate from the household assistant's confirmation-before-app-writes policy.
 
-
 Piotr wants this development cycle to deliberately invest in automated tests, evaluations, and agent code review. He has substantial experience with agentic development but wants stronger intentional verification than tests agents happen to generate along the way. He wants more of the coding-agent token budget spent on reviewing and verifying changes than on writing code.
 
 He is considering a coder/reviewer/human feedback loop and asks whether orchestration, tests/evals, or both are appropriate. Repair autonomy is now accepted below; the remaining development workflow and its implementation are not finalized.
 
 Recommended approach under discussion:
+
 - Establish a reproducible local environment, documented acceptance criteria, meaningful tests, and CI before building a custom orchestrator.
 - Use a coder plus a reviewer with fresh context. Give the reviewer the specification, actual diff, relevant source, and verification evidence; review test quality as well as implementation.
 - Automatically repair clear defects within the agreed scope and recheck the revised code, following the accepted policy below. Involve Piotr for disputed findings, scope changes, significant architecture decisions, and final merge approval. The earlier proposed two-round limit is superseded.
@@ -28,12 +28,12 @@ Recommended approach under discussion:
 - Define readiness through passing required checks, satisfied acceptance criteria, resolved substantive findings, and human approval. A reviewer's opinion alone is insufficient.
 - Spend review effort according to risk rather than making token consumption a success metric; favor small changes, evidence-backed findings, regression checks for real bugs, and a final concise review report.
 
-
 ### Accepted review and repair autonomy
 
 On October 8, 2026, Piotr chose automatic fixing of clear, undisputed findings within the agreed task scope, continuing through review and re-verification until the change satisfies its completion criteria. No approval is required for each repair round. This supersedes the proposed fixed limit of two repair/review rounds.
 
 Bring Piotr in for:
+
 - Disputed findings or conflicting recommendations that require judgment.
 - Scope changes.
 - Significant architectural decisions.
@@ -46,3 +46,19 @@ Proposed operational safeguard, not yet separately accepted: detect repeated fai
 ## Related plans
 
 The required checks and eval gates are agreed in [verification](pior-labs-assistant-verification.md). The accepted starting point and inspected template gaps are recorded in [architecture](pior-labs-assistant-architecture.md). Future app-specific AGENTS.md and reviewer instructions should reference these contracts rather than duplicate them.
+
+## Stage-one implementation status
+
+Stage-one branch now supplies application Better Auth OAuth/PKCE, authenticated
+central UserInfo identity mapping, app-owned Postgres sessions and Drizzle migration,
+protected `/api/me`, and minimal sign-in/user/sign-out. `pnpm verify` runs format,
+lint, typechecks, builds, isolated DB-backed auth tests and desktop/mobile smoke;
+CI runs the same command with frozen dependencies. These tests use HTTP SSO
+fixtures; real household login remains a separate pending provider gate.
+
+See [implementation plan](../implementation/stage-one-plan.md) and
+[revision, review, verification and setup evidence](../implementation/stage-one-evidence.md).
+Earlier template observations remain historical baseline evidence. Companion PRs
+are unmerged/unprovisioned; Piotr retains merge/deployment approval. Chat UI,
+assistant capabilities and their live-model evals remain later stages. Application
+sign-out ends only this app session; central SSO remains active.

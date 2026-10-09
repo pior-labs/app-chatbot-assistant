@@ -1,19 +1,23 @@
-import 'dotenv/config';
+import { config } from 'dotenv';
 import { serve } from '@hono/node-server';
-import { Hono } from 'hono';
+import postgres from 'postgres';
+import { createApp } from './app.js';
+import { createAuth } from './auth.js';
+import { databaseUrl } from './env.js';
 
-const app = new Hono();
-
-app.get('/health', (c) => c.json({ ok: true }));
-app.get('/api/health', (c) => c.json({ ok: true }));
-app.get('/api/hello', (c) => c.json({ message: 'Pior Labs web app template' }));
-
-const port = Number(process.env.API_PORT ?? 3000);
-
-serve({
+// Workspace scripts execute inside packages/api; production executes at root.
+config({ path: '../../.env' });
+config();
+const client = postgres(databaseUrl());
+const app = createApp(createAuth(client));
+const server = serve({
   fetch: app.fetch,
-  port,
+  port: Number(process.env.API_PORT ?? 3000),
   hostname: '0.0.0.0',
 });
-
-console.log(`API listening on :${port}`);
+for (const signal of ['SIGINT', 'SIGTERM'] as const) {
+  process.on(signal, () => {
+    server.close();
+    void client.end().then(() => process.exit(0));
+  });
+}

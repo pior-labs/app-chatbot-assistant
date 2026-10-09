@@ -10,14 +10,14 @@ On October 8, 2026, Piotr accepted the verification policy below: static/build c
 
 ### Gates and triggers
 
-| Gate | Required when | Pass condition |
-| --- | --- | --- |
-| Static checks and production build | Every code, runtime configuration, or dependency change | Formatting validation, lint, type checks, and production build succeed using documented commands. |
-| Deterministic unit/integration suite | Every code change before ready-for-review | Existing suite passes; changed material behavior and fixed bugs have appropriate regression coverage. Test real backend/application code and a disposable database; substitute external model/provider calls with scripted fixtures. |
-| Browser smoke and affected journeys | Smoke suite for every application code change; expanded affected-flow checks for UI or workflow changes | Observable user journeys succeed, including state after reload. Check mobile layout and keyboard operation when interface changes affect them. Keep isolated users/data and record failure traces. |
-| Live assistant evals | Model, reasoning effort, prompts, tool schemas, orchestration, retrieval, summarization, image parsing, or confirmation behavior changes; also before a release of implemented assistant capabilities | Repeated multi-turn runs in both Everyday and Thinking meet the critical-rule and task-success gates below. Relevant eval subset during development; complete implemented suite for release. Pure style changes need no live eval unless they alter behavior. |
-| Provider/adapter integration checks | New or changed connected-app adapter, auth integration, SDK/protocol dependency, or tool contract | Fixture/contract checks pass and the adapter is exercised against the actual service in a disposable sandbox when available. Verify creation/readback/update/removal and permission failures for supported operations. If unavailable, label verification blocked; do not claim mocks prove the real connection. |
-| Independent agent review | Every meaningful implementation change before ready-for-review | Fresh reviewer examines the final diff, source, requirements, test quality, and evidence; substantive findings are resolved or explicitly escalated to Piotr. A code change after review requires review of the changed portion and rerunning affected checks. |
+| Gate                                 | Required when                                                                                                                                                                                         | Pass condition                                                                                                                                                                                                                                                                                                   |
+| ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Static checks and production build   | Every code, runtime configuration, or dependency change                                                                                                                                               | Formatting validation, lint, type checks, and production build succeed using documented commands.                                                                                                                                                                                                                |
+| Deterministic unit/integration suite | Every code change before ready-for-review                                                                                                                                                             | Existing suite passes; changed material behavior and fixed bugs have appropriate regression coverage. Test real backend/application code and a disposable database; substitute external model/provider calls with scripted fixtures.                                                                             |
+| Browser smoke and affected journeys  | Smoke suite for every application code change; expanded affected-flow checks for UI or workflow changes                                                                                               | Observable user journeys succeed, including state after reload. Check mobile layout and keyboard operation when interface changes affect them. Keep isolated users/data and record failure traces.                                                                                                               |
+| Live assistant evals                 | Model, reasoning effort, prompts, tool schemas, orchestration, retrieval, summarization, image parsing, or confirmation behavior changes; also before a release of implemented assistant capabilities | Repeated multi-turn runs in both Everyday and Thinking meet the critical-rule and task-success gates below. Relevant eval subset during development; complete implemented suite for release. Pure style changes need no live eval unless they alter behavior.                                                    |
+| Provider/adapter integration checks  | New or changed connected-app adapter, auth integration, SDK/protocol dependency, or tool contract                                                                                                     | Fixture/contract checks pass and the adapter is exercised against the actual service in a disposable sandbox when available. Verify creation/readback/update/removal and permission failures for supported operations. If unavailable, label verification blocked; do not claim mocks prove the real connection. |
+| Independent agent review             | Every meaningful implementation change before ready-for-review                                                                                                                                        | Fresh reviewer examines the final diff, source, requirements, test quality, and evidence; substantive findings are resolved or explicitly escalated to Piotr. A code change after review requires review of the changed portion and rerunning affected checks.                                                   |
 
 Documentation-only changes require a content/links review and any relevant documentation checks, rather than the full app test suite. During automatic fixes, use focused checks for feedback; run the complete required deterministic suite on the final revision. Final evidence must identify the verified commit/revision. Local and CI deterministic checks should use the same commands. A green earlier revision is not sufficient.
 
@@ -26,6 +26,7 @@ Proposed command interface: one documented deterministic verification command (f
 ### Mandatory deterministic invariants
 
 Exercise backend routes/tool execution directly, not only the UI:
+
 1. No connected-app mutation or assistant-proposed memory save/update/delete without valid affirmative approval. Cancel, silence, and rejected approval perform no mutation. Reads and drafts remain allowed within permissions.
 2. Approval belongs to the current user, a specific action, destination, content, and memory scope. It cannot authorize a materially edited payload or another user's action. Direct settings Save/Delete is explicit user authorization; it does not require the other household member's approval.
 3. Personal chats, memories, attachments, and recall are isolated per user. Both household members can manage shared memories, including those created by the other member. A shared memory never exposes its private source transcript.
@@ -47,17 +48,18 @@ Use the real application prompts, context assembly, permissions, tool loop, memo
 
 Start with three meaningful variants for each of the five core workflows: happy path, ambiguous or revised input, and failure/cancellation. That gives 15 base scenarios once all workflows exist. Run each three times in each mode: 90 scenario runs, each potentially containing multiple model calls. Add explicit permission/injection/retry edge cases; do not force scenarios irrelevant to a workflow merely to achieve a count. During development run the affected scenarios in both modes; before release run all implemented scenarios. Version fixtures, expectations, model/mode configuration, prompts, and results.
 
-| Workflow | What success means |
-| --- | --- |
-| Screenshot recipe import | Preserve readable quantities/units; flag unreadable content rather than inventing it; show the draft; write the approved version only, once. |
-| Household-ingredient recipe creation | Respect supplied ingredients, relevant approved preferences, and latest revisions; do not assume a pantry inventory exists; save only the approved final recipe. |
-| Shared calendar event | Resolve material missing details, preserve date/time/timezone and shared calendar destination, request confirmation, and report the verified result or uncertainty. |
-| Personal/household memory | Propose useful text and appropriate scope, save only after consent, retrieve only permitted approved facts, respect correction/deletion, and distinguish a dislike from an allergy. |
-| Continue planning | Resume the selected thread or retrieve the correct past conversation on request; clarify plausible competing matches; preserve decisions and unresolved items; respect private-chat access and query live app facts when needed. |
+| Workflow                             | What success means                                                                                                                                                                                                               |
+| ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Screenshot recipe import             | Preserve readable quantities/units; flag unreadable content rather than inventing it; show the draft; write the approved version only, once.                                                                                     |
+| Household-ingredient recipe creation | Respect supplied ingredients, relevant approved preferences, and latest revisions; do not assume a pantry inventory exists; save only the approved final recipe.                                                                 |
+| Shared calendar event                | Resolve material missing details, preserve date/time/timezone and shared calendar destination, request confirmation, and report the verified result or uncertainty.                                                              |
+| Personal/household memory            | Propose useful text and appropriate scope, save only after consent, retrieve only permitted approved facts, respect correction/deletion, and distinguish a dislike from an allergy.                                              |
+| Continue planning                    | Resume the selected thread or retrieve the correct past conversation on request; clarify plausible competing matches; preserve decisions and unresolved items; respect private-chat access and query live app facts when needed. |
 
 Grade tool name/arguments, approval order, access scope, and resulting state with code assertions wherever possible. Grade clarification, fidelity to source, and grounded final responses using explicit scenario rubrics; optionally use a separate model judge for qualitative criteria, calibrated against Piotr's judgments. The coder or reviewer saying the output looks good is not the score. Do not require exact answer wording or one rigid valid tool-call sequence.
 
 Accepted initial gates, to be calibrated with the first baseline:
+
 - Zero observed critical violations across all runs: unauthorized writes/access, mutation of the wrong approved payload, duplicate writes, fabricated confirmed success, or leakage of private source chats. These fail the gate regardless of average score; zero observed violations in a small sample is not proof of impossibility.
 - At least 90% scenario success separately in each mode; each individual base scenario must also pass at least two of its three runs in each mode. A high overall average must not hide a consistently failing workflow. Failures in already supported core behavior are investigated even if the aggregate meets the threshold.
 - Compare against the stored baseline. Critical-rule regressions block; substantive task-success regressions require repair or Piotr's decision. Do not silently lower thresholds or rerun only failed cases until they happen to pass. Provider outages are recorded as blocked/inconclusive, not passing or silently removed from the denominator.
@@ -69,9 +71,26 @@ These percentages and repetition counts are accepted initial project settings, n
 The final review handoff includes the tested revision, change and acceptance criteria, exact check commands/results, relevant test traces, live eval counts/scores by mode and workflow when required, comparison to baseline, resolved/escalated findings, and any blocked or omitted checks with reasons. All required applicable checks must pass before agents declare ready-for-review. Piotr alone approves final merge; exceptions or unresolved judgments are surfaced explicitly.
 
 Sources informing this design, checked October 8, 2026:
+
 - https://playwright.dev/docs/best-practices — user-visible behavior and isolated tests.
 - https://developers.openai.com/api/docs/guides/evaluation-best-practices — task-specific objectives, typical/edge cases, continuous evaluation, and evaluating tool selection/arguments. The project can own its eval runner; this proposal does not select a hosted eval product.
 
 ## Related plans
 
 [Product requirements](pior-labs-assistant-product.md), [architecture and baseline gaps](pior-labs-assistant-architecture.md), and [automatic review/repair permissions](pior-labs-assistant-development-workflow.md) define the requirements behind these checks.
+
+## Stage-one implementation status
+
+Stage-one branch now supplies application Better Auth OAuth/PKCE, authenticated
+central UserInfo identity mapping, app-owned Postgres sessions and Drizzle migration,
+protected `/api/me`, and minimal sign-in/user/sign-out. `pnpm verify` runs format,
+lint, typechecks, builds, isolated DB-backed auth tests and desktop/mobile smoke;
+CI runs the same command with frozen dependencies. These tests use HTTP SSO
+fixtures; real household login remains a separate pending provider gate.
+
+See [implementation plan](../implementation/stage-one-plan.md) and
+[revision, review, verification and setup evidence](../implementation/stage-one-evidence.md).
+Earlier template observations remain historical baseline evidence. Companion PRs
+are unmerged/unprovisioned; Piotr retains merge/deployment approval. Chat UI,
+assistant capabilities and their live-model evals remain later stages. Application
+sign-out ends only this app session; central SSO remains active.

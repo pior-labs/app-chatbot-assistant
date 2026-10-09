@@ -1,4 +1,6 @@
-import 'dotenv/config';
+import { config } from 'dotenv';
+config({ path: '../../.env' });
+config();
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { drizzle } from 'drizzle-orm/postgres-js';
@@ -10,8 +12,7 @@ const migrationsFolder = fileURLToPath(new URL('../../drizzle', import.meta.url)
 const journalFile = fileURLToPath(new URL('../../drizzle/meta/_journal.json', import.meta.url));
 
 if (!existsSync(journalFile)) {
-  console.log('No generated Drizzle migration journal found; nothing to migrate.');
-  process.exit(0);
+  throw new Error('Missing committed Drizzle migration journal');
 }
 
 const client = postgres(databaseUrl(), { max: 1 });
