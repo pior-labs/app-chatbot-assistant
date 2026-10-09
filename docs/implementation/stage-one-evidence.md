@@ -99,3 +99,10 @@ Assistant-specific seed command and extracted helper were removed; the original
 seed implementation remains unchanged and registers Assistant alongside the other
 configured clients. Piotr also requested removing the added service-auth tests;
 the app retains its auth integration and browser suites.
+
+## Client configuration consistency
+
+Piotr requested matching Finance and Cookbook: service-auth now uses
+`requiredEnv("ASSISTANT_CLIENT_SECRET", "change-me-assistant")` and an unconditional
+Assistant client entry. Set the real secret before running the existing seed
+command; the fallback is a placeholder, as for the other registered apps.

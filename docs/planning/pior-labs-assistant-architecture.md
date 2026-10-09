@@ -107,3 +107,7 @@ sign-out ends only this app session; central SSO remains active.
 
 Piotr selected the existing service-auth `pnpm db:seed` command for client
 registration. No Assistant-specific registration command is needed.
+
+Piotr selected the existing Finance/Cookbook client configuration pattern for
+Assistant: a `requiredEnv` secret with a development placeholder and an
+unconditional client-registry entry. Configure the real secret before seeding.
