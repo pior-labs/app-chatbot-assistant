@@ -10,11 +10,11 @@ services:
       API_PORT: 3000
       DATABASE_URL: ${DOCKER_DATABASE_URL:-${DATABASE_URL:-}}
     expose:
-      - "3000"
+      - '3000'
     extra_hosts:
-      - "host.docker.internal:host-gateway"
+      - 'host.docker.internal:host-gateway'
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/health"]
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:3000/health']
       interval: 30s
       timeout: 5s
       retries: 3
@@ -22,7 +22,7 @@ services:
     networks:
       pior_edge:
         aliases:
-          - ${APP_SLUG:-webapp}-api
+          - ${APP_SLUG:-assistant}-api
       pior_data:
 
   web:
@@ -35,9 +35,9 @@ services:
       api:
         condition: service_healthy
     expose:
-      - "80"
+      - '80'
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:80/"]
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:80/']
       interval: 30s
       timeout: 5s
       retries: 3
@@ -45,7 +45,7 @@ services:
     networks:
       pior_edge:
         aliases:
-          - ${APP_SLUG:-webapp}-web
+          - ${APP_SLUG:-assistant}-web
 
 networks:
   pior_edge:

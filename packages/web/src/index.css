@@ -1,5 +1,5 @@
-@import "tailwindcss";
-@import "@pior-labs/design-system/styles.css";
+@import 'tailwindcss';
+@import '@pior-labs/design-system/styles.css';
 
 html {
   background: var(--background);

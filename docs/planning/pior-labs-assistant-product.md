@@ -16,20 +16,20 @@ Host within Pior Labs (szarans.ca), which is separate from the media server home
 
 On October 8, 2026, Piotr accepted all the proposed chat features below as the desired feature direction. He wants to build these himself. The accepted high-level order is working SSO, then UI design, then incremental feature implementation, as recorded in the planning index. Detailed feature ordering and initial release scope remain open; the earlier feature-priority suggestions are not a committed roadmap.
 
-| Feature | Intended behavior |
-| --- | --- |
-| Chat experience | Streaming responses, Markdown, code blocks, copy, stop, retry, and mobile layout. |
-| Past chats | Persist messages; reopen conversations; generate titles; rename, archive, and delete chats. |
-| Conversation context | Supply relevant messages and tool results to the model; summarize older content when threads grow. |
-| MCP tools | Connect apps, execute tools, and display progress, results, and failures. |
-| User accounts | Pior Labs SSO with separate conversations, memory, and permissions per user. |
-| Custom instructions | Persistent preferences for assistant responses and behavior. |
-| Long-term memory | Save useful facts and preferences for future conversations. |
-| Chat search | Find earlier discussions by title or message content. |
-| Attachments | Upload recipe screenshots, images, and documents. |
-| Reasoning mode selection | Choose Everyday or Thinking; both use GPT-6 Luna with different reasoning effort. |
-| Edit and branch | Revise prompts or explore alternatives while preserving the original conversation. |
-| Projects or spaces | Group conversations with shared instructions, files, and context. |
+| Feature                  | Intended behavior                                                                                  |
+| ------------------------ | -------------------------------------------------------------------------------------------------- |
+| Chat experience          | Streaming responses, Markdown, code blocks, copy, stop, retry, and mobile layout.                  |
+| Past chats               | Persist messages; reopen conversations; generate titles; rename, archive, and delete chats.        |
+| Conversation context     | Supply relevant messages and tool results to the model; summarize older content when threads grow. |
+| MCP tools                | Connect apps, execute tools, and display progress, results, and failures.                          |
+| User accounts            | Pior Labs SSO with separate conversations, memory, and permissions per user.                       |
+| Custom instructions      | Persistent preferences for assistant responses and behavior.                                       |
+| Long-term memory         | Save useful facts and preferences for future conversations.                                        |
+| Chat search              | Find earlier discussions by title or message content.                                              |
+| Attachments              | Upload recipe screenshots, images, and documents.                                                  |
+| Reasoning mode selection | Choose Everyday or Thinking; both use GPT-6 Luna with different reasoning effort.                  |
+| Edit and branch          | Revise prompts or explore alternatives while preserving the original conversation.                 |
+| Projects or spaces       | Group conversations with shared instructions, files, and context.                                  |
 
 Supporting capabilities discussed: usage/cost tracking, durable execution records, and avoiding duplicate app mutations when retrying failed responses.
 
@@ -42,12 +42,14 @@ Personal and household memory scopes, permission-based saving, and the basic man
 ### Accepted memory scopes
 
 On October 8, 2026, Piotr chose both personal and household memory:
+
 - Personal memory: information about an individual, such as a hobby they like; owned by that user and available to their assistant conversations.
 - Household memory: shared household information, such as a pasta dish Piotr made that both he and Natalie liked; available to household members' assistant conversations.
 
 These are illustrative product examples, not newly asserted real-world personal facts.
 
 Proposed implementation rules, still under discussion:
+
 - Retrieve relevant memories from the current user's personal scope and the household scope. Enforce scope access in the backend before supplying information to the model.
 - Preserve whose preference is being described, independently of the memory's visibility. A household-scoped memory can describe one member's food preference without implying that every member shares it.
 - Do not infer a shared preference from a statement about only one person. Default unclear scope to personal or ask before sharing.
@@ -60,6 +62,7 @@ Proposed implementation rules, still under discussion:
 On October 8, 2026, Piotr chose memory suggestions with permission before saving, from the initial version. The assistant may identify useful candidate memories during conversation and ask whether to save them. It must not silently save personal or household memories. This supersedes earlier proposals to start with explicit requests only or to save personal memories automatically.
 
 Recommended interaction, with UI details still open:
+
 1. Propose the exact fact or preference and its Personal or Household scope.
 2. Ask permission and offer Save, Edit, or Skip.
 3. Save only the approved content and scope after an affirmative response. Silence, rejection, or changing the topic is not approval.
@@ -70,6 +73,7 @@ Proposed implementation/verification rules: enforce approval in backend code rat
 ### Accepted memory management policy
 
 On October 8, 2026, Piotr accepted a simple memory settings page with Personal and Household views:
+
 - Each user can view, edit, and delete their own personal memories.
 - Either Piotr or Natalie can view, edit, and delete household memories, regardless of who originally saved them.
 - Assistant-proposed changes through chat still require a preview and affirmative confirmation.
@@ -112,6 +116,7 @@ Recommendation under discussion: use one shared Google Household calendar for in
 On October 8, 2026, Piotr confirmed that a shared household calendar is sufficient initially. The assistant will read and, after confirmation, write to that shared calendar. Individual calendar access and personal availability checks are deferred. It must not claim that either person is free based solely on the household calendar. Google hosting remains the recommended option; the user's reply confirms the shared scope without separately finalizing the provider.
 
 Sources:
+
 - https://developers.google.com/workspace/calendar/api/guides/overview
 - https://support.google.com/calendar/answer/99358?co=GENIE.Platform%3DiOS
 - https://support.apple.com/en-us/121539
@@ -129,13 +134,13 @@ On October 8, 2026, Piotr selected these five core workflows to guide the produc
 
 Proposed behavior and verification points, not yet finalized requirements:
 
-| Workflow | Proposed behavior | Verification focus |
-| --- | --- | --- |
-| Screenshot import | Extract a recipe draft, make uncertainty visible, preview it, and save through Cookbook after confirmation. | Faithful ingredient quantities and units; do not silently invent unreadable content; no duplicate saves on retries. |
-| Recipe creation | Use ingredients supplied by the user, relevant household preferences, and conversational revisions; preview and confirm the selected final recipe before saving. Pantry inventory integration is not assumed. | Respect constraints and latest edits; distinguish proposed ingredients from ingredients the user actually has; save the final agreed version. |
-| Calendar event | Resolve title, calendar, date, start/end or duration, and timezone; ask for missing material details; preview and confirm before creation; report the actual creation result. Conflict behavior still needs a decision. | Correct time/calendar, appropriate clarification, no duplicate events, and no false success report. |
-| Household memory | Propose a preference and household scope, ask permission, save only after approval, and retrieve it for relevant future tasks. Support inspection, editing, and deletion. | No save without permission; preserve who the preference concerns; do not turn a dislike into an allergy; apply it across relevant chats and respect updates/removal and access rules. |
-| Continue planning | Reopen and resume a saved thread, or retrieve relevant prior conversations from a new thread when the user asks. Clarify ambiguous matches and respect user access boundaries. | Preserve prior decisions and unresolved items; handle ambiguous references; recheck live app facts that may have changed. |
+| Workflow          | Proposed behavior                                                                                                                                                                                                       | Verification focus                                                                                                                                                                    |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Screenshot import | Extract a recipe draft, make uncertainty visible, preview it, and save through Cookbook after confirmation.                                                                                                             | Faithful ingredient quantities and units; do not silently invent unreadable content; no duplicate saves on retries.                                                                   |
+| Recipe creation   | Use ingredients supplied by the user, relevant household preferences, and conversational revisions; preview and confirm the selected final recipe before saving. Pantry inventory integration is not assumed.           | Respect constraints and latest edits; distinguish proposed ingredients from ingredients the user actually has; save the final agreed version.                                         |
+| Calendar event    | Resolve title, calendar, date, start/end or duration, and timezone; ask for missing material details; preview and confirm before creation; report the actual creation result. Conflict behavior still needs a decision. | Correct time/calendar, appropriate clarification, no duplicate events, and no false success report.                                                                                   |
+| Household memory  | Propose a preference and household scope, ask permission, save only after approval, and retrieve it for relevant future tasks. Support inspection, editing, and deletion.                                               | No save without permission; preserve who the preference concerns; do not turn a dislike into an allergy; apply it across relevant chats and respect updates/removal and access rules. |
+| Continue planning | Reopen and resume a saved thread, or retrieve relevant prior conversations from a new thread when the user asks. Clarify ambiguous matches and respect user access boundaries.                                          | Preserve prior decisions and unresolved items; handle ambiguous references; recheck live app facts that may have changed.                                                             |
 
 These workflows do not finalize feature ordering within the accepted SSO → UI → implementation stages. Finance remains in the intended integration scope even though it is not one of these five initial core scenarios.
 
@@ -143,10 +148,10 @@ These workflows do not finalize feature ordering within the accepted SSO → UI 
 
 On October 8, 2026, Piotr chose GPT-6 Luna (`gpt-6-luna`) for both modes. The two modes differ only in reasoning effort:
 
-| Mode | Model | Reasoning effort |
-| --- | --- | --- |
-| Everyday (default) | GPT-6 Luna | Low (`low`) |
-| Thinking | GPT-6 Luna | High (`high`) |
+| Mode               | Model      | Reasoning effort |
+| ------------------ | ---------- | ---------------- |
+| Everyday (default) | GPT-6 Luna | Low (`low`)      |
+| Thinking           | GPT-6 Luna | High (`high`)    |
 
 Sol was considered too expensive for the Thinking tier. There is no separate higher-cost model tier in the initial design. This supersedes the earlier general model-switching feature: initially provide a reasoning-mode selector using one model. Multiple models could be considered later if evaluations demonstrate a need.
 

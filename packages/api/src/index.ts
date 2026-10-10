@@ -1,19 +1,22 @@
-import 'dotenv/config';
 import { serve } from '@hono/node-server';
-import { Hono } from 'hono';
+import postgres from 'postgres';
+import { createApp } from './app.js';
+import { createAuth } from './auth.js';
+import { databaseConnection } from './env.js';
+import { loadEnvironment } from './load-env.js';
 
-const app = new Hono();
-
-app.get('/health', (c) => c.json({ ok: true }));
-app.get('/api/health', (c) => c.json({ ok: true }));
-app.get('/api/hello', (c) => c.json({ message: 'Pior Labs web app template' }));
-
-const port = Number(process.env.API_PORT ?? 3000);
-
-serve({
+loadEnvironment();
+const connection = databaseConnection();
+const client = postgres(connection.url, connection.options);
+const app = createApp(createAuth(client));
+const server = serve({
   fetch: app.fetch,
-  port,
+  port: Number(process.env.API_PORT ?? 3000),
   hostname: '0.0.0.0',
 });
-
-console.log(`API listening on :${port}`);
+for (const signal of ['SIGINT', 'SIGTERM'] as const) {
+  process.on(signal, () => {
+    server.close();
+    void client.end().then(() => process.exit(0));
+  });
+}

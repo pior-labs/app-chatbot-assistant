@@ -1,187 +1,144 @@
-# Pior Labs Chatbot Assistant
+# Szarans Assistant
 
-A planned household AI chat application, created from `pior-labs/template-webapp`. The current code is the template scaffold; assistant capabilities and SSO integration are not yet implemented.
+Stage one implements application SSO through existing Pior Labs service-auth.
+React/Vite provides sign-in/current-user/sign-out; Hono verifies app-owned
+PostgreSQL sessions through Better Auth. Chat and assistant features remain planned.
 
-## Planning
+Identity: display **Szarans Assistant**, hostname `chat.szarans.ca`, app/client/database
+slug `assistant`, cookie prefix `szarans-assistant`.
 
-Start with [the planning index](docs/planning/pior-labs-assistant-notes.md). It links the accepted product decisions, architecture baseline, Codex development workflow, and required verification policy. Development proceeds through working SSO, UI design, then incremental feature implementation. See [AGENTS.md](AGENTS.md) for the repository's agent instructions.
+## Local setup
 
-## Template foundation
+Use Node 22, pnpm 10.8.1 (`corepack enable`), an existing local PostgreSQL server,
+and package-read access to `@pior-labs/design-system` on GitHub Packages. Run one
+Pior Labs app at a time at **http://localhost:5173**. Use the hosted issuer
+`https://auth.szarans.ca/api/auth`; normal development needs no local service-auth.
 
-The following sections describe the inherited template and platform setup conventions.
+1. Set `GITHUB_TOKEN` with package-read access. Run `pnpm install --frozen-lockfile`.
+2. Like Cookbook, connect to the existing local PostgreSQL server over its Unix
+   socket using peer authentication as your OS user (`pior` on Piotr's machine).
+   No local database password or separate app role is needed. Create the app's
+   own database, owned by that user:
 
-This template provides the application-side foundation. Shared infrastructure remains owned by `pior-labs/platform-deploy`, shared authentication by `pior-labs/service-auth`, and platform conventions by `pior-labs/platform`.
+   ```bash
+   createdb assistant_dev
+   ```
 
-## Included foundation
+   If `assistant_dev` already exists but is owned by `postgres`, fix ownership
+   instead of recreating it:
 
-- pnpm workspace
-- TypeScript
-- React 19 + Vite frontend
-- Hono API
-- PostgreSQL + Drizzle ORM
-- `@pior-labs/design-system`
-- Docker / Docker Compose
-- Caddy static web runtime
-- platform-managed database secret support
-- `pior_edge` and `pior_data` network conventions
-- API and web health checks
-- GitHub Actions CI
-- self-hosted deployment workflow scaffold
-- `AGENTS.md` with Pior Labs repository rules
+   ```bash
+   sudo -u postgres psql -c 'ALTER DATABASE assistant_dev OWNER TO pior;'
+   ```
 
-Central OAuth/OIDC authentication is intentionally represented as configuration rather than reimplemented in this template. Each generated application must be registered as its own client in `service-auth` and should follow that repository's current integration contract.
+3. Copy `.env.example` to `.env.local`. Use
+   `DATABASE_URL=postgresql://pior@localhost:5432/assistant_dev?host=/var/run/postgresql`,
+   substituting your OS/PostgreSQL username if needed. Generate
+   an independent app secret with `openssl rand -base64 32` and set
+   `BETTER_AUTH_SECRET`. Obtain the registered Assistant client secret and set
+   `CENTRAL_AUTH_CLIENT_SECRET` on the API only.
+4. Confirm service-auth registered client `assistant` with exact callback
+   `http://localhost:5173/api/auth/oauth2/callback/auth-pior`. Keep
+   `BETTER_AUTH_URL=http://localhost:5173` and the hosted issuer.
+5. Run `pnpm db:migrate`, then `pnpm dev`. Visit localhost:5173. Vite proxies
+   `/api/*` to the API on 3000; both packages read root `.env.local`.
 
-## Create a new application
+Local API startup, migrations and Drizzle commands prefer root `.env.local`, with
+`.env` as a fallback. Exported shell/container variables take priority. Vite also
+supports root `.env.local` and its standard mode-specific files. With
+`NODE_ENV=production`, the API and database commands ignore `.env.local`; deploy
+using injected variables and the server-managed database URL file. Both env files
+are ignored by Git. `DATABASE_URL` is used by `pnpm dev` and migrations;
+`DOCKER_DATABASE_URL` is only for the API running in Docker.
+The socket URL is for host-run development only; containers need a TCP URL with
+appropriate credentials. Production continues using its dedicated app role and
+platform-managed connection file.
 
-1. Use this repository as a GitHub template.
-2. Name the new repository using the `app-*` convention, for example `app-cookbook`.
-3. Read `AGENTS.md` and the Pior Labs bootstrap prompt in `pior-labs/platform/prompts/new-webapp-bootstrap.md`.
-4. Replace the generic app metadata and package names where useful.
-5. Copy `.env.example` to `.env` for local development.
-6. Configure GitHub Packages access so `@pior-labs/design-system` can install.
-7. Define the application's real Drizzle schema and generate its first migration.
-8. Register the OAuth client in `service-auth`.
-9. Add the application database/role and Caddy routing configuration in `platform-deploy`. Wildcard DNS already covers the canonical hostname.
-10. Configure the repository's production runner, `APP_ENV` secret, and `DEPLOY_DIR` variable before enabling deployment.
+This app never seeds real household users. First successful login creates a local
+user/account linked to the stable central subject; service-auth owns both identities.
 
-## Local development
+## Environment
 
-```bash
-corepack enable
-cp .env.example .env
-pnpm install
-pnpm dev
-```
+| Variable                           | Purpose                                                          |
+| ---------------------------------- | ---------------------------------------------------------------- |
+| `DATABASE_URL`                     | Local app database URL, server only.                             |
+| `DATABASE_URL_FILE`                | Runtime connection file, takes precedence over `DATABASE_URL`.   |
+| `CENTRAL_AUTH_ISSUER`              | Hosted `https://auth.szarans.ca/api/auth`; discovery is derived. |
+| `CENTRAL_AUTH_CLIENT_ID`           | Dedicated registered `assistant` client.                         |
+| `CENTRAL_AUTH_CLIENT_SECRET`       | Matching plaintext service-auth client secret; API only.         |
+| `BETTER_AUTH_SECRET`               | Separate random app secret, at least 32 characters; API only.    |
+| `BETTER_AUTH_URL`                  | Localhost:5173 locally; `https://chat.szarans.ca` in production. |
+| `API_PORT`, `WEB_PORT`             | Default 3000/5173; local callback is registered at 5173.         |
+| `APP_SLUG`, `COMPOSE_PROJECT_NAME` | `assistant`, unique container namespace.                         |
+| `DOCKER_DATABASE_URL`              | Optional local container URL to existing local Postgres.         |
+| `PLATFORM_DATABASE_URL_FILE`       | Production host file mounted at `/run/secrets/database_url`.     |
+| `GITHUB_TOKEN`                     | Registry install/build access, never a frontend variable.        |
 
-The default development ports are:
+Production requires HTTPS. Only the configured app origin is trusted. No OAuth or
+session secret belongs in `VITE_*`, Git or the web container.
 
-- web: `http://localhost:5173`
-- API: `http://localhost:3000`
+## Sessions and auth contract
 
-Vite proxies `/api/*` to the local API during development.
+Better Auth is pinned to the platform's 1.6.20 version. Its generic OAuth callback
+is `/api/auth/oauth2/callback/auth-pior`, matching Cookbook and the actual trusted
+client registry. [Newer online documentation](https://better-auth.com/docs/plugins/generic-oauth)
+describes a different callback; upgrade only after reconciling the platform contract.
+PKCE/client-secret POST exchange, one-time state and required issuer validation
+protect the flow. Identity comes from authenticated central UserInfo (`sub`,
+`email`, `name`), rather than this pinned library's unsigned ID-token decoding.
+Automatic email-based account linking is disabled.
 
-Pior Labs applications reuse port `5173` one at a time. Local application
-development authenticates against hosted `https://auth.szarans.ca`; it does not
-require a local `service-auth` process. Each application may keep its own API
-port behind the Vite proxy.
+`GET /api/me` returns only current verified user ID/name/email. New `/api/*` routes
+require auth by default, except health and Better Auth's own protocol endpoints.
+Absent, forged, expired, revoked and foreign-app sessions return 401. Protected
+requests query Postgres; cookie session caching is disabled. Auth/user responses
+use `Cache-Control: no-store`.
 
-## Production request routing
+App sessions last seven days and renew at most daily on eligible session checks.
+Reload/API restart preserves a valid DB session. Sign-out revokes only this app's
+session and clears its cookie. **Central SSO and other apps stay signed in.**
+Signing in again may immediately reuse the central user; this is not an account
+switch or household-wide logout. Central logout does not retroactively revoke
+app sessions. Central token lifetimes and app session lifetimes are independent;
+no central refresh is needed to verify an existing app session.
 
-Production routing belongs to the platform Caddy instance managed by `platform-deploy`.
+All cookies use `szarans-assistant`, including emitted `szarans-assistant.state`
+and `szarans-assistant.session_token`. HTTPS adds `__Secure-` and Secure. Cookies
+are HttpOnly, SameSite=Lax and host scoped; no shared parent-domain cookie.
 
-Each application uses one canonical `<app>.szarans.ca` hostname. The same hostname is used from the trusted LAN and through Tailscale; Cloudflare and Tailscale wildcard DNS return the appropriate private address for the client's network context.
-
-New applications do not require an application-specific Cloudflare CNAME, dnsmasq host record, or Tailscale restricted-nameserver entry. They still require an explicit platform Caddy route. Add a Docker DNS alias only when another container must call the application through its canonical HTTPS hostname.
-
-The expected pattern is:
-
-```text
-<app>.szarans.ca
-        |
-        v
-platform Caddy
-  |-- /api/* --> <app>-api:3000
-  `-- /*      --> <app>-web:80
-                         |
-                         v
-                  static Caddy
-                  SPA files only
-```
-
-Separate `.ts.szarans.ca` application hostnames are no longer used.
-
-The Caddy process inside the web container is deliberately not a reverse proxy. It only serves the compiled Vite application and falls back to `index.html` for client-side routes. API routing, domains, TLS, and ingress remain platform responsibilities.
-
-## Database
-
-The API accepts either:
-
-- `DATABASE_URL` for local development, or
-- `DATABASE_URL_FILE` for a platform-managed production secret.
-
-Production should use the generated database connection file from `platform-deploy` rather than duplicating the database password in GitHub.
-
-Generate migrations after defining the application schema:
-
-```bash
-pnpm db:generate
-pnpm db:migrate
-```
-
-The starter schema contains an intentionally generic example table. Replace it with the application's actual domain schema before the first real migration.
-
-## Authentication
-
-Each application receives its own trusted OAuth client in `service-auth`.
-
-Configure the API with:
-
-```env
-BETTER_AUTH_SECRET=<separate-application-session-secret>
-BETTER_AUTH_URL=http://localhost:5173
-BETTER_AUTH_TRUSTED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
-
-CENTRAL_AUTH_ISSUER=https://auth.szarans.ca/api/auth
-CENTRAL_AUTH_DISCOVERY_URL=https://auth.szarans.ca/api/auth/.well-known/openid-configuration
-CENTRAL_AUTH_CLIENT_ID=<app-client-id>
-CENTRAL_AUTH_CLIENT_SECRET=<matching-server-only-client-secret>
-```
-
-Do not expose `CENTRAL_AUTH_CLIENT_SECRET` to Vite/browser code. Use the current `service-auth` documentation as the source of truth for issuer, discovery, callback, scope, PKCE, and token handling details.
-
-Every application must configure a unique Better Auth cookie namespace. Cookies
-are scoped by hostname rather than port and persist after a development server
-stops, so the default `better-auth.*` names collide when switching between apps:
-
-```ts
-export const auth = betterAuth({
-  // database, OAuth plugin, and model mapping...
-  advanced: {
-    cookiePrefix: 'myapp',
-    database: {
-      generateId: 'serial',
-    },
-  },
-});
-```
-
-Register both callbacks on the application's unique OAuth client:
-
-```text
-https://<app>.szarans.ca/api/auth/oauth2/callback/auth-pior
-http://localhost:5173/api/auth/oauth2/callback/auth-pior
-```
-
-After changing a production client registration, run Service Auth's Bootstrap
-workflow to reseed clients and then its Deploy workflow to restart Auth and
-reload cached registrations.
-
-## Design system
-
-The web package consumes `@pior-labs/design-system` from GitHub Packages. `.npmrc` configures the `@pior-labs` scope and `packages/web/src/index.css` imports the shared theme.
-
-## Docker
-
-The base Compose file joins the shared platform networks and publishes no host ports. For server-local debugging, use the local override:
+## Verification
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.local.yml up --build
+pnpm exec playwright install --with-deps chromium
+pnpm verify
 ```
 
-Production adds the platform-managed database secret mount:
+`verify` runs format, lint, typechecks (including tests), production builds,
+DB-backed auth integration tests and desktop/mobile Chromium smoke. Individual
+commands: `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm build`,
+`pnpm test`, `pnpm test:browser`. CI uses the same command with frozen installs.
+Browser failures retain traces in `test-results/`.
 
-```bash
-docker compose -f docker-compose.yml -f docker-compose.production.yml up -d --build
-```
+Tests run real Hono/Better Auth/Drizzle and the committed migration. Only external
+SSO is scripted: two fixture identities, real HTTP discovery/authorization/PKCE/
+UserInfo and negative cases. Root `.env`/`.env.local` credentials are ignored. Docker creates
+and removes a disposable loopback-only PostgreSQL 17 container for tests.
+Alternatively set `TEST_DATABASE_URL` to a disposable test server permitting
+CREATE/DROP DATABASE. Tests only create/drop fresh `assistant_test_<random>`
+databases; never supply production credentials. Ports 3000/5173 must be free for
+browser smoke. Fixture passes do not prove real household SSO.
 
-## Deployment
+## Provisioning and live acceptance
 
-`.github/workflows/deploy.yml` is manual by default. This prevents a newly generated repository from attempting a production deployment before its runner, environment, database, auth client, and routes are provisioned.
+See [stage-one setup/evidence](docs/implementation/stage-one-evidence.md).
+Separate companion PRs register the OAuth client and prepare database/Caddy routes.
+Piotr owns merge and production deployment. Wildcard DNS covers `chat.szarans.ca`.
+The web container serves the SPA only; platform Caddy routes API directly.
 
-Once the app has been validated, add the desired automatic trigger (normally a push to `main`).
-
-## Repository boundaries
-
-This repository owns app-specific code, schema/migrations, containers, CI/CD, and documentation.
-
-It should not become the source of truth for shared Caddy routing, PostgreSQL server provisioning, DNS conventions, central authentication implementation, or other Pior Labs platform infrastructure.
+Keep deployment manual. Set `DEPLOY_DIR`, `APP_ENV`, package access, canonical URL
+and independent secrets. Mount only the platform-generated app file at
+`/opt/docker/pior-labs/secrets/app-chatbot-assistant/database-url` through production
+Compose; app deployment runs migrations. No production changes have been applied.
+Live SSO must separately verify both household users, localhost callback, reload,
+protected API, sign-out and central-session behavior. Assistant-model evals do not
+apply to stage one.
