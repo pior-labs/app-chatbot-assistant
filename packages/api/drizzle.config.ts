@@ -1,19 +1,12 @@
-import { config } from 'dotenv';
-config({ path: '../../.env' });
-config();
 import { defineConfig } from 'drizzle-kit';
+import { drizzleDatabaseCredentials } from './src/env.js';
+import { loadEnvironment } from './src/load-env.js';
 
-const databaseUrl = process.env.DATABASE_URL;
-
-if (!databaseUrl) {
-  throw new Error('DATABASE_URL is required for drizzle-kit commands');
-}
+loadEnvironment();
 
 export default defineConfig({
   dialect: 'postgresql',
   schema: './src/db/schema.ts',
   out: './drizzle',
-  dbCredentials: {
-    url: databaseUrl,
-  },
+  dbCredentials: drizzleDatabaseCredentials(),
 });

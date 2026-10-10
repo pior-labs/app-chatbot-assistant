@@ -1,14 +1,13 @@
-import { config } from 'dotenv';
 import { serve } from '@hono/node-server';
 import postgres from 'postgres';
 import { createApp } from './app.js';
 import { createAuth } from './auth.js';
-import { databaseUrl } from './env.js';
+import { databaseConnection } from './env.js';
+import { loadEnvironment } from './load-env.js';
 
-// Workspace scripts execute inside packages/api; production executes at root.
-config({ path: '../../.env' });
-config();
-const client = postgres(databaseUrl());
+loadEnvironment();
+const connection = databaseConnection();
+const client = postgres(connection.url, connection.options);
 const app = createApp(createAuth(client));
 const server = serve({
   fetch: app.fetch,

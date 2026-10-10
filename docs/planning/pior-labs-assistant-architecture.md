@@ -56,6 +56,18 @@ Reviewed the current [platform README](https://github.com/pior-labs/platform/blo
 - The service-auth README includes older/local-client examples using port 3001. Verify the actual OAuth client registration and current integration implementation before coding; do not copy a conflicting example callback into the new app. Detailed production auth/deploy/design-system implementation was not audited here.
 - Standard deployment uses a canonical `<app>.szarans.ca` hostname, explicit platform Caddy routes and wildcard DNS. Remote access without Tailscale needs a separately chosen messaging or ingress approach; selecting the template does not make the app public.
 
+On October 10, 2026, Piotr requested root `.env.local` for local settings. API
+startup, migrations and Drizzle commands now load it ahead of `.env`, without
+overwriting exported variables. Production API/database commands skip `.env.local`.
+Vite already supports root `.env.local`. These files stay ignored by Git.
+
+On October 10, 2026, Piotr selected Cookbook's local database approach: use the
+existing host PostgreSQL instance with Unix-socket peer authentication as the
+OS/PostgreSQL user (`pior`), and a separate user-owned `assistant_dev` database.
+API startup, migrations and Drizzle tools support the `?host=/var/run/postgresql` connection
+parameter. This is host-run development only; production retains its dedicated
+app role and platform-managed credentials, and containers use TCP credentials.
+
 ## Proposed application structure
 
 Keep one application repository with the template's web and API packages. Within the API, organize conversations/context, model access, memory/recall, approvals/action execution, and app-owned MCP clients as distinct modules. This is a recommendation pending architecture discussion, not a finalized implementation layout.

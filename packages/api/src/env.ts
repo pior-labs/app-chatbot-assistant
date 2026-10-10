@@ -16,6 +16,33 @@ export function databaseUrl(): string {
   return value;
 }
 
+// postgres-js needs an explicit host option for Cookbook-style Unix socket URLs.
+export function databaseConnection(url = databaseUrl()) {
+  const parsedUrl = new URL(url);
+  const socketHost = parsedUrl.searchParams.get('host');
+  parsedUrl.searchParams.delete('host');
+
+  return {
+    url: parsedUrl.toString(),
+    options: socketHost ? { host: socketHost } : {},
+  };
+}
+
+// Drizzle Kit's URL form cannot pass postgres-js's separate socket-host option.
+export function drizzleDatabaseCredentials(url = databaseUrl()) {
+  const connection = databaseConnection(url);
+  if (!connection.options.host) return { url };
+
+  const parsedUrl = new URL(connection.url);
+  return {
+    host: connection.options.host,
+    port: Number(parsedUrl.port || '5432'),
+    user: decodeURIComponent(parsedUrl.username) || undefined,
+    password: decodeURIComponent(parsedUrl.password) || undefined,
+    database: decodeURIComponent(parsedUrl.pathname.slice(1)),
+  };
+}
+
 export function authEnvironment() {
   const required = (key: string) => {
     const value = process.env[key]?.trim();

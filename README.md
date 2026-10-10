@@ -15,16 +15,25 @@ Pior Labs app at a time at **http://localhost:5173**. Use the hosted issuer
 `https://auth.szarans.ca/api/auth`; normal development needs no local service-auth.
 
 1. Set `GITHUB_TOKEN` with package-read access. Run `pnpm install --frozen-lockfile`.
-2. Create a dedicated local database and role on your existing PostgreSQL server:
+2. Like Cookbook, connect to the existing local PostgreSQL server over its Unix
+   socket using peer authentication as your OS user (`pior` on Piotr's machine).
+   No local database password or separate app role is needed. Create the app's
+   own database, owned by that user:
 
-   ```sql
-   CREATE ROLE assistant_dev LOGIN PASSWORD 'replace-with-local-db-password';
-   CREATE DATABASE assistant_dev OWNER assistant_dev;
-   REVOKE CONNECT ON DATABASE assistant_dev FROM PUBLIC;
-   GRANT CONNECT ON DATABASE assistant_dev TO assistant_dev;
+   ```bash
+   createdb assistant_dev
    ```
 
-3. Copy `.env.example` to `.env`. Set `DATABASE_URL` for that database. Generate
+   If `assistant_dev` already exists but is owned by `postgres`, fix ownership
+   instead of recreating it:
+
+   ```bash
+   sudo -u postgres psql -c 'ALTER DATABASE assistant_dev OWNER TO pior;'
+   ```
+
+3. Copy `.env.example` to `.env.local`. Use
+   `DATABASE_URL=postgresql://pior@localhost:5432/assistant_dev?host=/var/run/postgresql`,
+   substituting your OS/PostgreSQL username if needed. Generate
    an independent app secret with `openssl rand -base64 32` and set
    `BETTER_AUTH_SECRET`. Obtain the registered Assistant client secret and set
    `CENTRAL_AUTH_CLIENT_SECRET` on the API only.
@@ -32,7 +41,18 @@ Pior Labs app at a time at **http://localhost:5173**. Use the hosted issuer
    `http://localhost:5173/api/auth/oauth2/callback/auth-pior`. Keep
    `BETTER_AUTH_URL=http://localhost:5173` and the hosted issuer.
 5. Run `pnpm db:migrate`, then `pnpm dev`. Visit localhost:5173. Vite proxies
-   `/api/*` to the API on 3000; both packages read root `.env`.
+   `/api/*` to the API on 3000; both packages read root `.env.local`.
+
+Local API startup, migrations and Drizzle commands prefer root `.env.local`, with
+`.env` as a fallback. Exported shell/container variables take priority. Vite also
+supports root `.env.local` and its standard mode-specific files. With
+`NODE_ENV=production`, the API and database commands ignore `.env.local`; deploy
+using injected variables and the server-managed database URL file. Both env files
+are ignored by Git. `DATABASE_URL` is used by `pnpm dev` and migrations;
+`DOCKER_DATABASE_URL` is only for the API running in Docker.
+The socket URL is for host-run development only; containers need a TCP URL with
+appropriate credentials. Production continues using its dedicated app role and
+platform-managed connection file.
 
 This app never seeds real household users. First successful login creates a local
 user/account linked to the stable central subject; service-auth owns both identities.
@@ -101,7 +121,7 @@ Browser failures retain traces in `test-results/`.
 
 Tests run real Hono/Better Auth/Drizzle and the committed migration. Only external
 SSO is scripted: two fixture identities, real HTTP discovery/authorization/PKCE/
-UserInfo and negative cases. Root `.env` credentials are ignored. Docker creates
+UserInfo and negative cases. Root `.env`/`.env.local` credentials are ignored. Docker creates
 and removes a disposable loopback-only PostgreSQL 17 container for tests.
 Alternatively set `TEST_DATABASE_URL` to a disposable test server permitting
 CREATE/DROP DATABASE. Tests only create/drop fresh `assistant_test_<random>`

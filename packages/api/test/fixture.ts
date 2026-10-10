@@ -10,6 +10,7 @@ import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import postgres from 'postgres';
 import { createAuth } from '../src/auth.js';
 import { createApp } from '../src/app.js';
+import { databaseConnection } from '../src/env.js';
 
 export const fixtureUsers = [
   { sub: 'household-one', email: 'one@example.test', name: 'Household One', email_verified: true },
@@ -41,7 +42,8 @@ export async function createFixture(baseURL = 'http://localhost:5173') {
       .at(-1);
     adminURL = `postgresql://postgres:fixture-only@localhost:${port}/postgres`;
   }
-  const admin = postgres(adminURL, { max: 1, connect_timeout: 1 });
+  const connection = databaseConnection(adminURL);
+  const admin = postgres(connection.url, { ...connection.options, max: 1, connect_timeout: 1 });
   const database = `assistant_test_${randomUUID().replaceAll('-', '')}`;
   let client: ReturnType<typeof postgres> | undefined;
   let providerServer: ReturnType<typeof serve> | undefined;
@@ -66,7 +68,8 @@ export async function createFixture(baseURL = 'http://localhost:5173') {
     await admin.unsafe(`CREATE DATABASE "${database}"`);
     const url = new URL(adminURL);
     url.pathname = `/${database}`;
-    client = postgres(url.toString(), { max: 3 });
+    const testConnection = databaseConnection(url.toString());
+    client = postgres(testConnection.url, { ...testConnection.options, max: 3 });
     await migrate(drizzle(client), {
       migrationsFolder: fileURLToPath(new URL('../drizzle', import.meta.url)),
     });
