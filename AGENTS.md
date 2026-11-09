@@ -19,6 +19,18 @@ Codex CLI is the primary development tool. For meaningful implementation changes
 
 Run the applicable checks defined in the verification policy. During repairs, use focused checks for feedback and run the complete required deterministic suite on the final revision. Run live evals when the policy requires them; documentation-only changes need content/link review and relevant documentation checks. Do not weaken criteria, remove assertions, skip failing tests or lower thresholds merely to obtain a passing result. Report the verified revision, results, resolved findings and any blockers honestly.
 
+## Shared PiorLabs context
+
+Before changing architecture, shared integrations, or deployment, consult the
+[PiorLabs workspace documentation](https://github.com/pior-labs/workspace/tree/main/docs).
+In the shared workspace, these documents are available under `../docs/`.
+
+Start with `architecture.md` and `conventions.md`; consult `service-catalog.md`,
+`infrastructure.md`, and `decisions/` as relevant. Follow the Assistant planning,
+review, and verification requirements above, update documentation in the
+repository that owns the contract, and flag conflicts between documentation
+and implementation.
+
 ## Before making architectural changes
 
 Read the current public platform documentation in `pior-labs/platform` and, when starting a new application, use `platform/prompts/new-webapp-bootstrap.md` as bootstrap context.
