@@ -1,0 +1,8 @@
+{
+  "services": ["api", "web"],
+  "compose_files": ["docker-compose.yml", "docker-compose.production.yml"],
+  "migration": ["node", "packages/api/dist/db/migrate.js"],
+  "base_url": "https://chat.szarans.ca",
+  "health_paths": ["/api/health", "/"],
+  "build_secrets": ["github_token"]
+}

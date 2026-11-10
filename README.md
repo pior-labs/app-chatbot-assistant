@@ -142,3 +142,10 @@ Compose; app deployment runs migrations. No production changes have been applied
 Live SSO must separately verify both household users, localhost callback, reload,
 protected API, sign-out and central-session behavior. Assistant-model evals do not
 apply to stage one.
+
+## Verified CI releases
+
+CI publishes immutable images after validation; production deployment is manual
+and selects a successful main CI run. Configure the separate
+`COMPOSE_PROJECT_NAME` Actions secret and follow [deployment operations](docs/DEPLOYMENT.md)
+for activation, exact run selection, persistent-data boundaries and recovery.
