@@ -12,3 +12,8 @@ data/
 playwright-report/
 test-results/
 *.tsbuildinfo
+
+__pycache__/
+
+.agents/
+.claude/
