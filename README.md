@@ -14,7 +14,8 @@ and package-read access to `@pior-labs/design-system` on GitHub Packages. Run on
 Pior Labs app at a time at **http://localhost:5173**. Use the hosted issuer
 `https://auth.szarans.ca/api/auth`; normal development needs no local service-auth.
 
-1. Set `GITHUB_TOKEN` with package-read access. Run `pnpm install --frozen-lockfile`.
+1. Set `GITHUB_TOKEN` with package-read access and add `//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}` to your
+   user-level `~/.npmrc` (current pnpm ignores credentials in the committed `.npmrc`). Run `pnpm install --frozen-lockfile`.
 2. Like Cookbook, connect to the existing local PostgreSQL server over its Unix
    socket using peer authentication as your OS user (`pior` on Piotr's machine).
    No local database password or separate app role is needed. Create the app's
