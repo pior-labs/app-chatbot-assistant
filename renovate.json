@@ -1,6 +1,4 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": [
-    "github>pior-labs/platform//renovate/default"
-  ]
+  "extends": ["github>pior-labs/platform//renovate/default"]
 }
