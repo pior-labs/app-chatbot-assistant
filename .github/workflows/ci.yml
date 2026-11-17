@@ -14,24 +14,34 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Test release and deployment tooling
+      - name: Test release, deployment and version tooling
         run: python3 -m unittest discover -s scripts -p 'test_*.py' -v
+      - name: Check runtime versions
+        run: python3 scripts/check_versions.py
+      # Reads packageManager from package.json; do not repeat the version here.
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
-      - name: Enable pnpm
-        run: corepack enable
+          node-version-file: .node-version
       # pnpm only expands credentials from user-level config. The literal
-      # ${GITHUB_TOKEN} is expanded at install time; no token is written.
+      # ${GITHUB_TOKEN} is expanded at runtime; no token is written.
       - name: Configure GitHub Packages auth
-        run: echo '//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}' >> ~/.npmrc
+        run: |
+          # shellcheck disable=SC2016 # pnpm, not the shell, expands the literal
+          echo '//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}' >> ~/.npmrc
+      # Every step that runs pnpm reads ~/.npmrc and needs the token it
+      # references; other steps, including third-party actions, do not get it.
       - name: Install dependencies
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: pnpm install --frozen-lockfile
       - name: Install browser
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: pnpm exec playwright install --with-deps chromium
       - name: Verify
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: pnpm verify
       - uses: actions/upload-artifact@v4
         if: failure()
