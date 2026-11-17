@@ -10,9 +10,10 @@ slug `assistant`, cookie prefix `szarans-assistant`.
 ## Local setup
 
 Use the Node.js version in `.node-version` (fnm, mise, nodenv and asdf read it
-directly) and any pnpm release, which switches itself to the version in
+directly) and pnpm 9.7 or later, which switches itself to the version in
 `packageManager`; Node.js 25 and later no longer bundle Corepack. You also need
-an existing local PostgreSQL server, and package-read access to `@pior-labs/design-system` on GitHub Packages. Run one
+an existing local PostgreSQL server and package-read access to
+`@pior-labs/design-system` on GitHub Packages. Run one
 Pior Labs app at a time at **http://localhost:5173**. Use the hosted issuer
 `https://auth.szarans.ca/api/auth`; normal development needs no local service-auth.
 

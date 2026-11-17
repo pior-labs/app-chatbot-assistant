@@ -12,10 +12,6 @@ permissions:
 jobs:
   validate:
     runs-on: ubuntu-latest
-    env:
-      # pnpm reads ~/.npmrc in every step, so the token it references is
-      # available job-wide rather than only during install.
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v4
       - name: Test release, deployment and version tooling
@@ -33,11 +29,19 @@ jobs:
         run: |
           # shellcheck disable=SC2016 # pnpm, not the shell, expands the literal
           echo '//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}' >> ~/.npmrc
+      # Every step that runs pnpm reads ~/.npmrc and needs the token it
+      # references; other steps, including third-party actions, do not get it.
       - name: Install dependencies
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: pnpm install --frozen-lockfile
       - name: Install browser
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: pnpm exec playwright install --with-deps chromium
       - name: Verify
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: pnpm verify
       - uses: actions/upload-artifact@v4
         if: failure()
