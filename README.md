@@ -42,7 +42,7 @@ Pior Labs app at a time at **http://localhost:5173**. Use the hosted issuer
    `BETTER_AUTH_SECRET`. Obtain the registered Assistant client secret and set
    `CENTRAL_AUTH_CLIENT_SECRET` on the API only.
 4. Confirm service-auth registered client `assistant` with exact callback
-   `http://localhost:5173/api/auth/oauth2/callback/auth-pior`. Keep
+   `http://localhost:5173/api/auth/callback/auth-pior`. Keep
    `BETTER_AUTH_URL=http://localhost:5173` and the hosted issuer.
 5. Run `pnpm db:migrate`, then `pnpm dev`. Visit localhost:5173. Vite proxies
    `/api/*` to the API on 3000; both packages read root `.env.local`.
@@ -83,14 +83,31 @@ session secret belongs in `VITE_*`, Git or the web container.
 
 ## Sessions and auth contract
 
-Better Auth is pinned to the platform's 1.6.20 version. Its generic OAuth callback
-is `/api/auth/oauth2/callback/auth-pior`, matching Cookbook and the actual trusted
-client registry. [Newer online documentation](https://better-auth.com/docs/plugins/generic-oauth)
-describes a different callback; upgrade only after reconciling the platform contract.
-PKCE/client-secret POST exchange, one-time state and required issuer validation
-protect the flow. Identity comes from authenticated central UserInfo (`sub`,
-`email`, `name`), rather than this pinned library's unsigned ID-token decoding.
-Automatic email-based account linking is disabled.
+Better Auth is pinned to 1.7.25 (workspace decision 0003). The web app starts
+sign-in with `POST /api/auth/sign-in/social` and `{ "provider": "auth-pior" }`.
+Exact callbacks registered in service-auth:
+
+- http://localhost:5173/api/auth/callback/auth-pior
+- https://chat.szarans.ca/api/auth/callback/auth-pior
+
+service-auth also keeps the Better Auth 1.6 paths
+(`/api/auth/oauth2/callback/auth-pior`) registered until every application has
+upgraded, so reverting this upgrade still signs in.
+
+PKCE/client-secret POST exchange, one-time state and required ID-token
+verification protect the flow: each ID token's signature, issuer, audience and
+nonce are checked against the issuer and JWKS that discovery publishes. The
+profile comes from authenticated central UserInfo (`sub`, `email`, `name`),
+whose subject must match the verified ID token. Accounts are keyed on that
+subject; automatic email-based account linking is disabled. A token response
+without an ID token is refused, and an ID token presented directly to the
+sign-in endpoint does not create a session. Sign-out revokes only the Assistant
+session; provider logout is disabled.
+
+1.6 rejected a callback without an `iss` parameter. 1.7 still rejects a
+mismatched `iss` but accepts a missing one, relying on the verified ID token's
+issuer instead. With a single provider, the mix-up attack that RFC 9207's `iss`
+parameter addresses does not apply.
 
 `GET /api/me` returns only current verified user ID/name/email. New `/api/*` routes
 require auth by default, except health and Better Auth's own protocol endpoints.
@@ -125,7 +142,9 @@ Browser failures retain traces in `test-results/`.
 
 Tests run real Hono/Better Auth/Drizzle and the committed migration. Only external
 SSO is scripted: two fixture identities, real HTTP discovery/authorization/PKCE/
-UserInfo and negative cases. Root `.env`/`.env.local` credentials are ignored. Docker creates
+UserInfo, EdDSA-signed ID tokens with a published JWKS, and negative cases
+including unsigned, wrong-key, wrong-issuer, wrong-audience, wrong-nonce,
+expired, other-subject and missing ID tokens. Root `.env`/`.env.local` credentials are ignored. Docker creates
 and removes a disposable loopback-only PostgreSQL 17 container for tests.
 Alternatively set `TEST_DATABASE_URL` to a disposable test server permitting
 CREATE/DROP DATABASE. Tests only create/drop fresh `assistant_test_<random>`

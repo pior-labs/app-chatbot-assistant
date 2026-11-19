@@ -17,11 +17,11 @@ function cookie(response: Response) {
     .join('; ');
 }
 async function start() {
-  const response = await fixture.app.request('http://localhost:5173/api/auth/sign-in/oauth2', {
+  const response = await fixture.app.request('http://localhost:5173/api/auth/sign-in/social', {
     method: 'POST',
     headers: { Origin: 'http://localhost:5173', 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      providerId: 'auth-pior',
+      provider: 'auth-pior',
       callbackURL: '/',
       errorCallbackURL: '/?error=sign-in',
     }),
@@ -158,26 +158,20 @@ test('cookies are namespaced, HttpOnly, SameSite=Lax and secure in production', 
   const started = await start();
   assert.equal(
     started.url.searchParams.get('redirect_uri'),
-    'http://localhost:5173/api/auth/oauth2/callback/auth-pior',
+    'http://localhost:5173/api/auth/callback/auth-pior',
   );
   assert.equal(started.url.searchParams.get('code_challenge_method'), 'S256');
+  assert.ok(started.url.searchParams.get('nonce'));
   assert.match(started.stateCookie, /szarans-assistant.state=/);
 });
 
 test('state/cookie/issuer mismatch and callback replay cannot create sessions', async () => {
   const exchanges = fixture.tokenExchanges();
-  for (const mode of [
-    'wrong-state',
-    'missing-cookie',
-    'wrong-issuer',
-    'missing-issuer',
-    'expired-state',
-  ]) {
+  for (const mode of ['wrong-state', 'missing-cookie', 'wrong-issuer', 'expired-state']) {
     const state = await start();
     const callback = new URL(await approve(state.url));
     if (mode === 'wrong-state') callback.searchParams.set('state', 'wrong');
     if (mode === 'wrong-issuer') callback.searchParams.set('iss', 'https://evil.example');
-    if (mode === 'missing-issuer') callback.searchParams.delete('iss');
     if (mode === 'expired-state')
       await fixture.client`update verifications set expires_at = now() - interval '1 day', value = jsonb_set(value::jsonb, '{expiresAt}', '0'::jsonb)::text`;
     const response = await fixture.app.request(callback.toString(), {
@@ -187,6 +181,15 @@ test('state/cookie/issuer mismatch and callback replay cannot create sessions', 
     assert.match(response.headers.get('location')!, /error=/);
   }
   assert.equal(fixture.tokenExchanges(), exchanges);
+  // Better Auth 1.7 accepts a callback without `iss`: the issuer is enforced by the
+  // verified ID token instead (see the ID token test below).
+  const unstated = await start();
+  const withoutIssuer = new URL(await approve(unstated.url));
+  withoutIssuer.searchParams.delete('iss');
+  const accepted = await fixture.app.request(withoutIssuer.toString(), {
+    headers: { Cookie: unstated.stateCookie },
+  });
+  assert.match(cookie(accepted), /szarans-assistant.session_token=.+/);
   const valid = await login();
   const replay = await fixture.app.request(valid.callback, {
     headers: { Cookie: valid.state.stateCookie },
@@ -213,9 +216,57 @@ test('provider errors and invalid UserInfo do not establish sessions', async () 
   fixture.setMalformedProfile(false);
 });
 
+test('ID tokens that fail verification or name another subject do not establish sessions', async () => {
+  const modes = [
+    'unsigned',
+    'wrong-key',
+    'wrong-issuer',
+    'wrong-audience',
+    'wrong-nonce',
+    'expired',
+    'other-subject',
+    'missing',
+  ] as const;
+  try {
+    for (const mode of modes) {
+      fixture.setIdTokenMode(mode);
+      const state = await start();
+      const callback = await approve(state.url);
+      const response = await fixture.app.request(callback, {
+        headers: { Cookie: state.stateCookie },
+      });
+      assert.doesNotMatch(cookie(response), /session_token=.+/, mode);
+      assert.match(response.headers.get('location')!, /error=/, mode);
+    }
+  } finally {
+    fixture.setIdTokenMode('valid');
+  }
+});
+
+test('a signed ID token alone cannot sign in without the authorization code flow', async () => {
+  const sessions = async () => (await fixture.client`select id from sessions`).length;
+  const before = await sessions();
+  const response = await fixture.app.request('http://localhost:5173/api/auth/sign-in/social', {
+    method: 'POST',
+    headers: { Origin: 'http://localhost:5173', 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      provider: 'auth-pior',
+      callbackURL: '/',
+      idToken: { token: fixture.signedIdToken() },
+    }),
+  });
+  // Prove the token itself passed verification and was refused only for lacking an
+  // authenticated UserInfo profile, rather than being rejected for an unrelated reason.
+  const body = (await response.json()) as { code?: string };
+  assert.equal(response.status, 401);
+  assert.equal(body.code, 'FAILED_TO_GET_USER_INFO');
+  assert.doesNotMatch(cookie(response), /session_token=.+/);
+  assert.equal(await sessions(), before);
+});
+
 test('cross-origin sign-in/sign-out and callback redirects are rejected', async () => {
   const { sessionCookie } = await login();
-  for (const path of ['sign-out', 'sign-in/oauth2']) {
+  for (const path of ['sign-out', 'sign-in/social']) {
     const response = await fixture.app.request(`/api/auth/${path}`, {
       method: 'POST',
       headers: {
@@ -223,14 +274,14 @@ test('cross-origin sign-in/sign-out and callback redirects are rejected', async 
         Origin: 'https://evil.example',
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ providerId: 'auth-pior', callbackURL: '/' }),
+      body: JSON.stringify({ provider: 'auth-pior', callbackURL: '/' }),
     });
     assert.equal(response.status, 403);
   }
-  const response = await fixture.app.request('/api/auth/sign-in/oauth2', {
+  const response = await fixture.app.request('/api/auth/sign-in/social', {
     method: 'POST',
     headers: { Origin: 'http://localhost:5173', 'Content-Type': 'application/json' },
-    body: JSON.stringify({ providerId: 'auth-pior', callbackURL: 'https://evil.example' }),
+    body: JSON.stringify({ provider: 'auth-pior', callbackURL: 'https://evil.example' }),
   });
   assert.equal(response.status, 403);
 });
