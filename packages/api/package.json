@@ -19,8 +19,7 @@
     "hono": "^4.7.2",
     "postgres": "^3.4.9",
     "zod": "^4.4.2",
-    "better-auth": "1.6.20",
-    "@better-auth/drizzle-adapter": "1.6.20"
+    "better-auth": "1.7.25"
   },
   "devDependencies": {
     "@types/node": "^22.13.4",

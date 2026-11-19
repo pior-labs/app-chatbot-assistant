@@ -46,7 +46,7 @@ test('both household identities sign in, survive reload, and sign out through re
 test('sign-in errors are visible and retryable', async ({ page }) => {
   await page.goto('/?error=sign-in');
   await expect(page.getByRole('alert')).toContainText('Sign-in did not complete');
-  await page.route('**/api/auth/sign-in/oauth2', (route) =>
+  await page.route('**/api/auth/sign-in/social', (route) =>
     route.fulfill({ status: 503, body: '{}' }),
   );
   await page.getByRole('button', { name: 'Sign in with Pior Labs' }).click();

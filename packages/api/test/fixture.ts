@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash, generateKeyPairSync, randomUUID, sign } from 'node:crypto';
 import { once } from 'node:events';
 import type { AddressInfo } from 'node:net';
 import { fileURLToPath } from 'node:url';
@@ -11,6 +11,32 @@ import postgres from 'postgres';
 import { createAuth } from '../src/auth.js';
 import { createApp } from '../src/app.js';
 import { databaseConnection } from '../src/env.js';
+
+// Ways the fixture can corrupt the ID token it issues, to prove each is rejected.
+export type IdTokenMode =
+  | 'valid'
+  | 'unsigned'
+  | 'wrong-key'
+  | 'wrong-issuer'
+  | 'wrong-audience'
+  | 'wrong-nonce'
+  | 'expired'
+  | 'other-subject';
+
+// Sign a compact EdDSA JWS, as service-auth's Better Auth jwt plugin does by default.
+function signIdToken(
+  claims: object,
+  privateKey: ReturnType<typeof generateKeyPairSync>['privateKey'],
+) {
+  const header = Buffer.from(JSON.stringify({ alg: 'EdDSA', typ: 'JWT', kid: 'fixture' })).toString(
+    'base64url',
+  );
+  const payload = Buffer.from(JSON.stringify(claims)).toString('base64url');
+  const signature = sign(null, Buffer.from(`${header}.${payload}`), privateKey).toString(
+    'base64url',
+  );
+  return `${header}.${payload}.${signature}`;
+}
 
 export const fixtureUsers = [
   { sub: 'household-one', email: 'one@example.test', name: 'Household One', email_verified: true },
@@ -80,6 +106,15 @@ export async function createFixture(baseURL = 'http://localhost:5173') {
     let failToken = false;
     let badProfile = false;
     let malformedProfile = false;
+    let idTokenMode: IdTokenMode = 'valid';
+    const signingKey = generateKeyPairSync('ed25519');
+    const foreignKey = generateKeyPairSync('ed25519');
+    const publicJwk = {
+      ...signingKey.publicKey.export({ format: 'jwk' }),
+      kid: 'fixture',
+      alg: 'EdDSA',
+      use: 'sig',
+    };
     const codes = new Map<string, { query: URLSearchParams; user: number }>();
     const tokens = new Map<string, number>();
     provider.get('/api/auth/.well-known/openid-configuration', (c) =>
@@ -89,10 +124,13 @@ export async function createFixture(baseURL = 'http://localhost:5173') {
         token_endpoint: `${issuer}/oauth2/token`,
         userinfo_endpoint: `${issuer}/oauth2/userinfo`,
         end_session_endpoint: `${issuer}/oauth2/end-session`,
+        jwks_uri: `${issuer}/jwks`,
+        id_token_signing_alg_values_supported: ['EdDSA'],
         token_endpoint_auth_methods_supported: ['client_secret_post'],
         authorization_response_iss_parameter_supported: true,
       }),
     );
+    provider.get('/api/auth/jwks', (c) => c.json({ keys: [publicJwk] }));
     provider.get('/api/auth/oauth2/authorize', (c) => {
       const query = new URL(c.req.url).searchParams;
       const links = fixtureUsers
@@ -141,14 +179,27 @@ export async function createFixture(baseURL = 'http://localhost:5173') {
       tokenExchanges++;
       const accessToken = randomUUID();
       tokens.set(accessToken, stored.user);
-      // The pinned library must not trust these misleading, unsigned claims.
-      const idToken = [
-        'eyJhbGciOiJub25lIn0',
-        Buffer.from(
-          JSON.stringify({ sub: 'attacker', email: 'attacker@example.test', name: 'Attacker' }),
-        ).toString('base64url'),
-        '',
-      ].join('.');
+      const now = Math.floor(Date.now() / 1000);
+      const user = fixtureUsers[stored.user];
+      const claims = {
+        iss: idTokenMode === 'wrong-issuer' ? 'https://evil.example' : issuer,
+        aud: idTokenMode === 'wrong-audience' ? 'another-client' : 'assistant',
+        sub: idTokenMode === 'other-subject' ? fixtureUsers[1 - stored.user].sub : user.sub,
+        email: user.email,
+        name: user.name,
+        email_verified: user.email_verified,
+        nonce: idTokenMode === 'wrong-nonce' ? 'wrong-nonce' : stored.query.get('nonce'),
+        iat: now,
+        exp: idTokenMode === 'expired' ? now - 60 : now + 300,
+      };
+      const idToken =
+        idTokenMode === 'unsigned'
+          ? [
+              Buffer.from(JSON.stringify({ alg: 'none' })).toString('base64url'),
+              Buffer.from(JSON.stringify(claims)).toString('base64url'),
+              '',
+            ].join('.')
+          : signIdToken(claims, (idTokenMode === 'wrong-key' ? foreignKey : signingKey).privateKey);
       return c.json({
         access_token: accessToken,
         token_type: 'Bearer',
@@ -196,6 +247,9 @@ export async function createFixture(baseURL = 'http://localhost:5173') {
       },
       setBadProfile: (value: boolean) => {
         badProfile = value;
+      },
+      setIdTokenMode: (value: IdTokenMode) => {
+        idTokenMode = value;
       },
     };
   } catch (error) {

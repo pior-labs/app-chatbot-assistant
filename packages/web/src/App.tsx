@@ -26,13 +26,13 @@ export function App() {
     setError('');
     try {
       const response = await fetch(
-        `/api/auth/${action === 'sign-in' ? 'sign-in/oauth2' : 'sign-out'}`,
+        `/api/auth/${action === 'sign-in' ? 'sign-in/social' : 'sign-out'}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(
             action === 'sign-in'
-              ? { providerId: 'auth-pior', callbackURL: '/', errorCallbackURL: '/?error=sign-in' }
+              ? { provider: 'auth-pior', callbackURL: '/', errorCallbackURL: '/?error=sign-in' }
               : {},
           ),
         },
