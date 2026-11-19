@@ -65,7 +65,7 @@ Do not add a second authentication system, app-level reverse proxy, database ser
 - Use the hosted issuer `https://auth.szarans.ca/api/auth`; normal application
   development does not require a local `service-auth`.
 - Register the exact callback
-  `http://localhost:5173/api/auth/oauth2/callback/auth-pior`.
+  `http://localhost:5173/api/auth/callback/auth-pior`.
 - Give every application a unique Better Auth `cookiePrefix`. Localhost cookies
   are not isolated by port and persist when switching applications.
 - Keep the OAuth client secret and application session secret server-only.
