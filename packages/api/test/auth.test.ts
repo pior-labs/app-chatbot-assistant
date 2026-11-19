@@ -255,7 +255,11 @@ test('a signed ID token alone cannot sign in without the authorization code flow
       idToken: { token: fixture.signedIdToken() },
     }),
   });
-  assert.notEqual(response.status, 200);
+  // Prove the token itself passed verification and was refused only for lacking an
+  // authenticated UserInfo profile, rather than being rejected for an unrelated reason.
+  const body = (await response.json()) as { code?: string };
+  assert.equal(response.status, 401);
+  assert.equal(body.code, 'FAILED_TO_GET_USER_INFO');
   assert.doesNotMatch(cookie(response), /session_token=.+/);
   assert.equal(await sessions(), before);
 });

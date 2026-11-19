@@ -253,7 +253,8 @@ export async function createFixture(baseURL = 'http://localhost:5173') {
         idTokenMode = value;
       },
       // A correctly signed ID token for a fixture user, as an attacker who obtained one
-      // could present it directly to the social sign-in endpoint.
+      // could present it directly to the social sign-in endpoint. It carries no nonce
+      // because the nonce in that request body is optional.
       signedIdToken: (user = 0) => {
         const now = Math.floor(Date.now() / 1000);
         return signIdToken(
