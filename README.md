@@ -90,10 +90,6 @@ Exact callbacks registered in service-auth:
 - http://localhost:5173/api/auth/callback/auth-pior
 - https://chat.szarans.ca/api/auth/callback/auth-pior
 
-service-auth also keeps the Better Auth 1.6 paths
-(`/api/auth/oauth2/callback/auth-pior`) registered until every application has
-upgraded, so reverting this upgrade still signs in.
-
 PKCE/client-secret POST exchange, one-time state and required ID-token
 verification protect the flow: each ID token's signature, issuer, audience and
 nonce are checked against the issuer and JWKS that discovery publishes. The
