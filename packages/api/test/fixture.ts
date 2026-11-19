@@ -21,7 +21,8 @@ export type IdTokenMode =
   | 'wrong-audience'
   | 'wrong-nonce'
   | 'expired'
-  | 'other-subject';
+  | 'other-subject'
+  | 'missing';
 
 // Sign a compact EdDSA JWS, as service-auth's Better Auth jwt plugin does by default.
 function signIdToken(
@@ -205,7 +206,7 @@ export async function createFixture(baseURL = 'http://localhost:5173') {
         token_type: 'Bearer',
         expires_in: 3600,
         refresh_token: 'fixture-refresh',
-        id_token: idToken,
+        ...(idTokenMode === 'missing' ? {} : { id_token: idToken }),
       });
     });
     provider.get('/api/auth/oauth2/end-session', (c) => {
@@ -250,6 +251,15 @@ export async function createFixture(baseURL = 'http://localhost:5173') {
       },
       setIdTokenMode: (value: IdTokenMode) => {
         idTokenMode = value;
+      },
+      // A correctly signed ID token for a fixture user, as an attacker who obtained one
+      // could present it directly to the social sign-in endpoint.
+      signedIdToken: (user = 0) => {
+        const now = Math.floor(Date.now() / 1000);
+        return signIdToken(
+          { iss: issuer, aud: 'assistant', ...fixtureUsers[user], iat: now, exp: now + 300 },
+          signingKey.privateKey,
+        );
       },
     };
   } catch (error) {

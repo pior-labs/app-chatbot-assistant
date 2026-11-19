@@ -36,6 +36,9 @@ export function createAuth(client: ReturnType<typeof postgres>, env = authEnviro
             // result carries `sub`, Better Auth rejects it unless it matches the verified
             // ID token's subject, which is also the account key.
             getUserInfo: async (tokens) => {
+              // requireIdTokenVerification only verifies an ID token that is present. Without
+              // one, Better Auth would key the account on UserInfo alone, so refuse it.
+              if (!tokens.idToken) return null;
               try {
                 const response = await fetch(`${env.issuer}/oauth2/userinfo`, {
                   headers: { Authorization: `Bearer ${tokens.accessToken}` },

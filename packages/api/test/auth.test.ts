@@ -225,6 +225,7 @@ test('ID tokens that fail verification or name another subject do not establish 
     'wrong-nonce',
     'expired',
     'other-subject',
+    'missing',
   ] as const;
   try {
     for (const mode of modes) {
@@ -240,6 +241,23 @@ test('ID tokens that fail verification or name another subject do not establish 
   } finally {
     fixture.setIdTokenMode('valid');
   }
+});
+
+test('a signed ID token alone cannot sign in without the authorization code flow', async () => {
+  const sessions = async () => (await fixture.client`select id from sessions`).length;
+  const before = await sessions();
+  const response = await fixture.app.request('http://localhost:5173/api/auth/sign-in/social', {
+    method: 'POST',
+    headers: { Origin: 'http://localhost:5173', 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      provider: 'auth-pior',
+      callbackURL: '/',
+      idToken: { token: fixture.signedIdToken() },
+    }),
+  });
+  assert.notEqual(response.status, 200);
+  assert.doesNotMatch(cookie(response), /session_token=.+/);
+  assert.equal(await sessions(), before);
 });
 
 test('cross-origin sign-in/sign-out and callback redirects are rejected', async () => {

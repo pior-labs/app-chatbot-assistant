@@ -99,8 +99,15 @@ verification protect the flow: each ID token's signature, issuer, audience and
 nonce are checked against the issuer and JWKS that discovery publishes. The
 profile comes from authenticated central UserInfo (`sub`, `email`, `name`),
 whose subject must match the verified ID token. Accounts are keyed on that
-subject; automatic email-based account linking is disabled. Sign-out revokes only
-the Assistant session; provider logout is disabled.
+subject; automatic email-based account linking is disabled. A token response
+without an ID token is refused, and an ID token presented directly to the
+sign-in endpoint does not create a session. Sign-out revokes only the Assistant
+session; provider logout is disabled.
+
+1.6 rejected a callback without an `iss` parameter. 1.7 still rejects a
+mismatched `iss` but accepts a missing one, relying on the verified ID token's
+issuer instead. With a single provider, the mix-up attack that RFC 9207's `iss`
+parameter addresses does not apply.
 
 `GET /api/me` returns only current verified user ID/name/email. New `/api/*` routes
 require auth by default, except health and Better Auth's own protocol endpoints.
@@ -135,7 +142,9 @@ Browser failures retain traces in `test-results/`.
 
 Tests run real Hono/Better Auth/Drizzle and the committed migration. Only external
 SSO is scripted: two fixture identities, real HTTP discovery/authorization/PKCE/
-UserInfo and negative cases. Root `.env`/`.env.local` credentials are ignored. Docker creates
+UserInfo, EdDSA-signed ID tokens with a published JWKS, and negative cases
+including unsigned, wrong-key, wrong-issuer, wrong-audience, wrong-nonce,
+expired, other-subject and missing ID tokens. Root `.env`/`.env.local` credentials are ignored. Docker creates
 and removes a disposable loopback-only PostgreSQL 17 container for tests.
 Alternatively set `TEST_DATABASE_URL` to a disposable test server permitting
 CREATE/DROP DATABASE. Tests only create/drop fresh `assistant_test_<random>`
